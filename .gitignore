@@ -2,3 +2,4 @@
 .vscode
 __pycache__
 \scrape_prices.egg-info
+chromedriver.exe

@@ -10,16 +10,16 @@ import click
 import requests
 import tabulate 
 from fuzzywuzzy import fuzz
-from deep_translator import GoogleTranslator
+
 
 # Local application imports
-
+from translate import Translator
 
 # Scraped websites 
 KSP = 'https://ksp.co.il/web/cat/'
 IVORY = 'https://www.ivory.co.il/catalog.php'
 TMS = 'https://tms.co.il/'
-TRANSLATOR = GoogleTranslator(source='auto', target='en')
+TRANSLATOR = Translator(source='detect language', target='en')
 
 @dataclass 
 class Item: 
@@ -125,6 +125,6 @@ def find_similarty(item_found : Item, item_given : Item) -> int:
 
 if __name__=='__main__':
     cli()
-    
+    TRANSLATOR.quit()
     
 

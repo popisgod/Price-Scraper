@@ -1,6 +1,8 @@
+# Standard library imports
+import time 
+
 
 # Third party imports
-import time 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By  
@@ -16,17 +18,22 @@ GOOGLE_TRANSLATE = 'https://translate.google.com'
 
 
 class Translator:
+
     def __init__(self, source : str = 'detect language', target : str = 'EN') -> None:
+        # BUG: Detect language is bugged with any language written left to right as google translate removes the clear source text button.
+        # The button only reappears after entring some filler text, making it impossible to translate more text unless I enter the filler and only then press the button.
+        # BUG: User has to manually quit the driver in order to close it 
+        
         # Intiate the selenium webdriver 
         options = Options()
         options.binary_location = CHROME_PATH
         options.add_argument('log-level=3')
         options.add_experimental_option("excludeSwitches", ['enable-logging'])
-        options.add_experimental_option("detach", True)
-        options.add_argument("--headless")
+        options.add_argument("--headless=new")
         self.webdriver = webdriver.Chrome(service=Service(CHROMEDRIVER_PATH),
                                     options=options)
         self.webdriver.get(GOOGLE_TRANSLATE)
+        
         
         self.source = source
         self.target = target
@@ -34,6 +41,7 @@ class Translator:
         # ---- setting up the source language ----
 
         # BuiltIn timeout, waits until the condition has been fulfilled, returns the element
+        # open selection menu 
         try:
             WebDriverWait(self.webdriver, 30).until(
                 EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[1]/c-wiz/div[1]/c-wiz/div[2]/button/div[3]'))).click()
@@ -64,6 +72,7 @@ class Translator:
         '''
         time.sleep(0.2)
         
+        # open selection menu 
         try:
             WebDriverWait(self.webdriver, 30).until(
                 EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[1]/c-wiz/div[1]/c-wiz/div[5]/button/div[3]'))).click()
@@ -97,36 +106,33 @@ class Translator:
             str: translated text 
         """
     
-        try: 
-            WebDriverWait(self.webdriver, 30).until(
-                EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[1]/span/span/div/textarea'))).send_keys(text)
-        # In case the selected language doesn't exist catch error
-        except ElementNotVisibleException as e:
-            print('did not find target language')
-            raise e 
-        
+        # Send text to be translated 
         WebDriverWait(self.webdriver, 30).until(
-                EC.visibility_of_element_located((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[9]/div/div[4]/div[2]/span[2]/button/div[3]')))
+            EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[1]/span/span/div/textarea'))).send_keys(text)
+    
+        # wait untill translated text appears 
+        WebDriverWait(self.webdriver, 30).until(
+                EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[9]/div/div[4]/div[2]/span[2]/button/div[3]')))
         
+        # Get trasnlated text element 
         translated_text_element : WebElement =  WebDriverWait(self.webdriver, 30).until(
-                EC.visibility_of_element_located((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[9]/div/div[1]/span[1]/span/span')))
+                EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[9]/div/div[1]/span[1]/span/span')))
         
+    
         translated_text = translated_text_element.text
         
-        
-        try: 
+        if self.source == 'detect language': 
+            # Send text to be translated 
             WebDriverWait(self.webdriver, 30).until(
-                EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[1]/span/span/div/textarea'))).send_keys('test')
-        # In case the selected language doesn't exist catch error
-        except ElementNotVisibleException as e:
-            print('did not find target language')
-            raise e 
-        
+            EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[1]/span/span/div/textarea'))).send_keys('bug')
+    
+        # Clear source text
         WebDriverWait(self.webdriver, 30).until(
                 EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[1]/div[1]/div/div[1]/span/button/div[3]'))).click()
 
+        # Wait until translated text is removed 
         WebDriverWait(self.webdriver, 30).until(
-                EC.visibility_of_element_located((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[1]')))
+                EC.element_to_be_clickable((By.XPATH, '/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[3]/c-wiz[2]/div/div[1]')))
         
         return translated_text
 
@@ -139,4 +145,5 @@ class Translator:
 if __name__=='__main__':
     translator = Translator('EN', 'HE')
     print(translator.translate("hello, world"))
+    print(translator.translate('hey smiley face'))
     
